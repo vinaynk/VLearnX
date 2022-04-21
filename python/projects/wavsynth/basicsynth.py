@@ -21,13 +21,11 @@ def getSinWav(freq, nsamp, amp=0.2):
 
 def justSinWav():
     'just a simple sin wav (pure tone)'
-    freq  = 400 #hz
-    dur   = 1   #s
+    freq  = 800     # hz
+    dur   = 1       # s
     nsamp = iround(FS * dur)
     wav   = getSinWav(freq, nsamp)
-    plt.plot(wav)
-    plt.show()
-    wavfile.write('justSinWav.wav', FS, wav)
+    wavfile.write('output.wav', FS, wav)
 
 
 def seqManySinWavs():
@@ -35,7 +33,7 @@ def seqManySinWavs():
     freq  = 200
     dur   = 0.5
     nsamp = iround(dur * FS)
-    ratio = 6/5
+    ratio = 7/5
     sil   = np.zeros(FS//10, dtype=F32)
     wavs  = [ sil ]
     for wid in range(5):
@@ -44,9 +42,7 @@ def seqManySinWavs():
         wavs.append(sil)
         freq *= ratio
     wav = np.hstack(wavs)
-    plt.plot(wav)
-    plt.show()
-    wavfile.write('seqManySinWavs.wav', FS, wav)
+    wavfile.write('output.wav', FS, wav)
 
 
 def basicRampUpDownEnvelope(attack, release):
@@ -113,9 +109,7 @@ def seqManySinWavsWithEnv():
         wavs.append(sil)
         freq *= ratio
     wav = np.hstack(wavs)
-    plt.plot(wav)
-    plt.show()
-    wavfile.write('seqManySinWavsWithEnv.wav', FS, wav)
+    wavfile.write('output.wav', FS, wav)
 
 
 def additiveSynth(freq, dur, vol):
@@ -138,8 +132,8 @@ def additiveSynth(freq, dur, vol):
         fhar = freq * har           # frequency for the partial
         if fhar > FS * 0.4:         # respect nyquist (0.4 being safe)
             break
-        fade = 4 + 0.25 * har       # fade depends on the partial har
-        amp  = (har+2) ** -2.5      # amplitude depends on partial har
+        fade = 4 + 0.3 * har        # fade depends on the partial har
+        amp  = (har+0) ** -2.5      # amplitude depends on partial har
         env  = adsrFadeEnvelope(attack, decay, sustain, release,
                                 sustainAmp=0.4, fade=fade)
         partial = getSinWav(fhar, len(env), amp=amp) * env
@@ -161,14 +155,14 @@ def seqManyMuliHarmonicWav():
         wavs.append(sil)
         freq *= ratio
     wav = np.hstack(wavs)
-    wavfile.write('seqManyMuliHarmonicWav.wav', FS, wav)
+    wavfile.write('output.wav', FS, wav)
 
 
 def main():
-    justSinWav()
+    #justSinWav()
     #seqManySinWavs()
     #seqManySinWavsWithEnv()
-    #seqManyMuliHarmonicWav()
+    seqManyMuliHarmonicWav()
 
 
 if __name__ == '__main__':
