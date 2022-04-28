@@ -15,6 +15,7 @@ random.seed(0)
 
 
 def sumVecs(vecList):
+    'sum all vecs(potentially of diff len) in a list'
     if not vecList:
         return np.zeros(1, dtype=F32)
     maxSize = max([len(vec) for vec in vecList])
@@ -50,41 +51,40 @@ def sequenceDirect(llvec, step):
 
 
 def sequenceApVsGp():
-    '''
-    Why should keys be
-    '''
+    'How to map keys to frequencies?'
     for jump in 'ap gp'.split():
         freq = 200
-        frames = []
+        frames = []       # frames[n] -> list of vecs
         frames.append([]) # initial sil
         for idx in range(12):
-            vec = synth.additiveSynth(freq, 1, 1)
+            vec = synth.additiveSynth(freq, 1, 1) # generate sound
             frames.append([vec])
             if jump == 'ap':
-                freq += 20
+                freq += 20     # for AP
             else:
-                freq *= 11/10
+                freq *= 11/10  # for GP
             if idx == 6:
-                freq = 1400
+                freq = 1400    # jump in frequency
         combined = sequenceDirect(frames, 12000)
         wavfile.write(f'output-{jump}.wav', FS, combined)
 
 
-def setupKeymap():
+def keymapEqTemp():
     '''
-    returns a dict that maps (octave, keyname) to its freq in Hz
+    Returns a dict that maps (octave, keyname) to its freq in Hz
+    (Tuning scheme: equal temperament)
     '''
-    f0   = 55
+    f0   = 80 # 55 is the usual default
     keys = 'a a# b c c# d d# e f f# g g#'.split()
     fvec = []
     keymap = {}
-    for oc in range(0, 7):
+    for oc in range(0, 5):
         for idx, key in enumerate(keys):
             # f[k] = α f[k-1] ; α = 2 ** (1/12)
             fkey = f0 * 2 ** (oc + idx/12)
             fvec.append(fkey)
             keymap[(oc, key)] = fkey
-            # print(f'{oc} {key} {fkey:.2f}')
+            #print(f'{oc:}\t{key:4}\t{fkey:.2f}')
     if 0:
         fvec = np.array(fvec)
         fvec = np.log2(fvec)
@@ -105,17 +105,20 @@ def keyPatten():
     return re.compile(patt)
 
 
-_keymap  = setupKeymap()
+_keymap  = keymapEqTemp()
 _keypatt = keyPatten()
 
 
 def parseKey(key):
-    'parse a key of the form 3c#4+2'
+    '''
+    parse a key of the form 3c#4+2
+    return a 4-tuple of octave, key, duration, volume
+    '''
     mt  = _keypatt.match(key.strip())
     oc  = int(mt.group(1))
     key = mt.group(2)
     dur = mt.group(3)
-    dur = 4 if dur is None else int(dur)
+    dur = 1 if dur is None else int(dur)
     vol = mt.group(4)
     vol = 0 if vol is None else int(vol)
     return oc, key, dur, vol
@@ -130,10 +133,12 @@ def kt4fdv(kt4):
 
 
 def testParseKey():
-    keys = '2a# 3b+3 1d2 4e2-3'.split()
+    keys = '2a# 3b+3 1d2 4e2-3 2b 3g4+4'.split()
     for key in keys:
         kt4 = parseKey(key)
-        print(key, kt4, kt4fdv(kt4))
+        fdv = kt4fdv(kt4)
+        fdv = '{:.2f} {} {:.2f}'.format(*fdv)
+        print(f'{key} {kt4} {fdv}')
 
 
 def str2klseq(data):
@@ -163,21 +168,40 @@ def klseq2music(klseq, kdur=1, step=8000):
     return music
 
 
+def readStripComments(fi):
+    'remove lines starting with # and return combined data'
+    ret = []
+    for line in fi:
+        line = line.strip()
+        if line.startswith('#'):
+            continue
+        ret.append(line)
+    ret = ' '.join(ret)
+    return ret
+
+
 def txt2wav(inp, out):
+    'load txt from inp and write wav to out'
     with open(inp) as fi:
-        data = fi.read()
+        data = readStripComments(fi)
     data = str2klseq(data)
-    music = klseq2music(data, 1/2, 12000)
+    music = klseq2music(data, 1, 12000)
     wavfile.write(out, FS, music)
+
+
+def generateMusic():
+    txt2wav('fur-elise.txt', 'fur-elise.wav')
+    #txt2wav('my-music.txt', 'my-music.wav')
 
 
 def main():
     #sequenceApVsGp()
     #testParseKey()
-    txt2wav('fur-elise.txt', 'fur-elise.wav')
+    generateMusic()
 
 
 if __name__ == '__main__':
     main()
+
 
 

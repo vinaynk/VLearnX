@@ -123,23 +123,23 @@ def additiveSynth(freq, dur, vol):
     harjump  = 5
 
     attack   = iround(0.003 * FS)
-    decay    = iround(0.10  * FS)
+    decay    = iround(0.03  * FS)
     sustain  = iround(dur   * FS)
-    release  = iround(0.04  * FS)
+    release  = iround(0.02  * FS)
 
     combined   = 0
     for har in range(1, harlim, harjump):
-        fhar = freq * har           # frequency for the partial
-        if fhar > FS * 0.4:         # respect nyquist (0.4 being safe)
+        fhar = freq * har         # frequency for the partial
+        if fhar > FS * 0.4:      # respect nyquist
             break
-        fade = 4 + 0.3 * har        # fade depends on the partial har
-        amp  = (har+0) ** -2.5      # amplitude depends on partial har
+        fade = 2.5 + 0.4 * har      # fade depends on the partial har
+        amp  = (har+2) ** -2.5    # amplitude depends on partial har
         env  = adsrFadeEnvelope(attack, decay, sustain, release,
-                                sustainAmp=0.4, fade=fade)
+                                sustainAmp=0.8, fade=fade)
         partial = getSinWav(fhar, len(env), amp=amp) * env
         combined = combined + partial
-
-    ret = combined / abs(combined).max() * 0.5 * vol
+    correction = (110 / freq) ** 0.4
+    ret = combined / abs(combined).max() * 0.5 * vol * correction
     return ret
 
 
@@ -174,4 +174,6 @@ if __name__ == '__main__':
 # -> I am not presenting anything new or original
 # -> Consider this as a fairly good starting point
 #    (rather than a `gold standard`)
+
+
 
