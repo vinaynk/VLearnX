@@ -1,10 +1,11 @@
-| 2e | 2d# | 2e | 2d# | 2e | 2b | 2d | 2c | 2a2 1a4-6 | | | |
-1c | 1e | 2a | 2b2 0e4-6 | | | |
-1e | 1g# | 2b | 2c2 1a4-6  | | |
-1e | 2e | 2d# | 2e | 2d# | 2e | 2b | 2d | 2c | 2a2 1a4-6 | | | |
-1c | 1e | 2a | 2b2 0e4-6 | | |
-1e | 2c | 2b | 2a2 1a4-6 | | |
-2b | 2c | 2d | 2e2 1c4-6 | | |
-1g | 2f | 2e | 2d2 1a4-6 | | |
-1e | 2d | 2c | 2b2 0e4-6 | |
-1e | 1e | 2e | 1e | 2e | 2e | 1e | 2d# | 2e | 2d# | 2e | 2d# | 2e | 2d# | 2e | 2d# | 2e | 2b | 2d | 2c | 2a2 1a4-6 | | | |
+#NOTE: Slight change from the initial version. C is the starting key for an octave now.
+| 2e | 2d# | 2e | 2d# | 2e | 1b | 2d | 2c | 1a2 0a4-6 | | | |
+1c | 1e | 1a | 1b2 0e4-6 | | | |
+1e | 1g# | 1b | 2c2 0a4-6  | | |
+1e | 2e | 2d# | 2e | 2d# | 2e | 1b | 2d | 2c | 1a2 0a4-6 | | | |
+1c | 1e | 1a | 1b2 0e4-6 | | |
+1e | 2c | 1b | 1a2 0a4-6 | | |
+1b | 2c | 2d | 2e2 1c4-6 | | |
+1g | 2f | 2e | 2d2 0a4-6 | | |
+1e | 2d | 2c | 1b2 0e4-6 | |
+1e | 1e | 2e | 1e | 2e | 2e | 1e | 2d# | 2e | 2d# | 2e | 2d# | 2e | 2d# | 2e | 2d# | 2e | 1b | 2d | 2c | 1a2 0a4-6 | | | |
