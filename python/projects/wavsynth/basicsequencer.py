@@ -117,8 +117,8 @@ def txt2wav(inp, out):
 
 
 def generateMusic():
-    txt2wav('fur-elise.txt', 'fur-elise.wav')
-    #txt2wav('my-music.txt', 'my-music.wav')
+    txt2wav('txtmusic/fur-elise.txt', 'fur-elise.wav')
+    #txt2wav('txtmusic/my-music.txt', 'my-music.wav')
 
 
 def main():

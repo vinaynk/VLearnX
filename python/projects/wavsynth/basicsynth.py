@@ -5,6 +5,9 @@ import re
 from scipy.io import wavfile
 from matplotlib import pyplot as plt
 
+from functools import lru_cache
+import soundfile as sf
+
 
 FS  = 48000         # project sampling rate
 F32 = np.float32    # useful alias
@@ -217,11 +220,69 @@ def kt4fdv(kt4):
     return f, d, v
 
 
+def getSampleEnv(dur):
+    dur  = int(dur * FS)
+    fall = int(0.2 * FS)
+    env = np.hstack([ np.ones(dur), np.linspace(1, 0, fall) ])
+    return env
+
+
+def applyEnv(audio, dur, vol):
+    vol1 = 10 ** (vol / 10)
+    audio = audio / abs(audio).max() * 0.5 * vol1
+    env   = getSampleEnv(dur)
+    if len(audio) > len(env):
+        audio = audio[:len(env)]
+    audio *= env
+    return F32(audio)
+
+
+def pianoSample(octave, key, dur, vol):
+    key = key.upper()
+    fname = f'samples/piano/{octave}{key}.ogg'
+    audio, rate = sf.read(fname)
+    assert rate == FS
+    audio = applyEnv(audio, dur, vol)
+    return audio
+
+
+__dmap = { 'H' : 'samples/home/' }
+
+def loadByWavlist(key):
+    srcdir = __dmap[key[0]]
+    idx = int(key[1:]) # this is the line number
+    with open(f'{srcdir}/wavlist.txt') as fi:
+        lines = [ line.strip() for line in fi ]
+    fname = lines[idx-0]
+    audio, rate = sf.read(f'{srcdir}/{fname}')
+    assert rate == FS
+    return F32(audio)
+
+
+@lru_cache(maxsize=None)
+def sampleSynth(octave, key, dur, vol):
+    if key[0] == 'P':
+        ret = pianoSample(octave, key[1:], dur, vol)
+    elif key[0] in __dmap:
+        ret = loadByWavlist(key)
+    else:
+        ret = pianoSample(octave, key, dur, vol)
+    return ret
+
+
+def testSampleSynth():
+    #data = sampleSynth(6, 'a', 2, 0)
+    data = sampleSynth(6, 'H4', 2, 0)
+    plt.plot(data); plt.show()
+    #print(rate, data.shape, data.dtype)
+
+
 def main():
     #justSinWav()
     #seqManySinWavs()
     #seqManySinWavsWithEnv()
-    seqManyMuliHarmonicWav()
+    #seqManyMuliHarmonicWav()
+    testSampleSynth()
 
 
 if __name__ == '__main__':
