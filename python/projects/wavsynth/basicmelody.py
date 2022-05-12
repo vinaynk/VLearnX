@@ -3,12 +3,12 @@
 import numpy as np
 from scipy.io import wavfile
 
-from matplotlib import pyplot as plt
-
 import basicsynth as bsynth
 from basicsynth import iround, FS, F32
 import basicsequencer as bseq
 from copy import deepcopy as dcopy
+
+import plotutils
 
 
 RI = np.random.randint
@@ -75,11 +75,11 @@ def toneCurve(patlen=16, wlen=8, incli=0):
     if wlen > 1:
         nsize += 2 * wlen
     noise  = np.random.rand(nsize)
-    if incli != 0:
-        noise += np.linspace(0, incli, nsize)
     if wlen > 1:
         win    = np.hamming(wlen)
         noise = np.convolve(noise, win, 'same')[wlen:-wlen]
+    if incli != 0:
+        noise += np.linspace(0, incli, len(noise))
     noise = norm01(noise)
     return noise
 
@@ -108,7 +108,7 @@ def curveFamilyProg(patlen=16, wlen=10, incli=0, beta=0.2, count=6):
 
 def assembleMelody(keys, hits, curve):
     'assemble melody from keys, hits and curve'
-    scale  = len(keys) - 0.1
+    scale  = len(keys) - 0.01
     curve  = curve * scale
     toneidx = np.int32(curve)
     ret    = []
@@ -186,7 +186,7 @@ def repeatPatten(pat, count):
     return ret
 
 
-def addBackground(pattern, keys, dur=4, vol=-2):
+def addBackground(pattern, keys, dur=4, vol=-3):
     keys = keys.split()
     for idx, frame in enumerate(pattern):
         key = keys[idx%len(keys)]
@@ -198,10 +198,13 @@ def addBackground(pattern, keys, dur=4, vol=-2):
 
 
 def testSingleMelody():
-    np.random.seed(3)
-    keys   = '5c 5e 5d 5f'.split()
-    hits   = pickHitPoints(16, 6)
-    curve  = toneCurve(16, 4, 1)
+    np.random.seed(12)
+    keys   = '5c 5d 5e 5f'.split()
+    for step in range(7):
+        hits   = pickHitPoints(16, 7)
+        curve  = toneCurve(16, 0, 0)
+        plotutils.plotMelodyGen(step, keys, hits, curve)
+    return
     melody = assembleMelody(keys, hits, curve)
     melody = expandKeypat(melody)
     melody = repeatPatten(melody)
@@ -209,6 +212,18 @@ def testSingleMelody():
     music  = addBackground(melody, '7c - 2c - - 2c - -', 4)
     music  = pat2wav(melody, 12000)
     wavfile.write('melody.wav', FS, music)
+
+
+def generatePlots():
+    keys   = '5c 5d 5e 5f'.split()
+    for step in range(10):
+        wsize = 0
+        if step >= 8:
+            wsize = 4
+        np.random.seed(12)
+        hits   = pickHitPoints(16, 7)
+        curve  = toneCurve(16, wsize, 0)
+        plotutils.plotMelodyGen(step, keys, hits, curve)
 
 
 def extMelodyPart(li, k, h, c, b):
@@ -226,6 +241,7 @@ def onlyBackground(li, nf, b):
 
 
 def testMultiPartMelody():
+    #seed = 11
     np.random.seed(11)
     P = extMelodyPart
     S = onlyBackground
@@ -241,12 +257,12 @@ def testMultiPartMelody():
     c1d = toneCurve(8, 10, -0.5)
 
     b1a = '7c - - - 2c - - -'
-    b1b = '7c - 3c - - - 2c -'
     b1b = '7c - 3c - 6c - 2c -'
+    b1c = '6e - 3c - 2g - 2c -'
 
     mus = []
 
-    S(mus, 8, b1a)
+    S(mus, 16, b1a)
     P(mus, k1a, h1a, c1u, b1a)
     P(mus, k1a, h1a, c1d, b1a)
     P(mus, k1a, h1a, c1u, b1a)
@@ -258,9 +274,10 @@ def testMultiPartMelody():
     P(mus, k1a, h1a, c1u, b1b)
     P(mus, k1a, h1b, c1d, b1b)
 
+    np.random.rand(52)
     h2a = pickHitPoints(8, 4)
-    h2b = hitSomeMore(h1a, 1)
-    h2c = hitSomeMore(h1a, 2)
+    h2b = hitSomeMore(h2a, 1)
+    h2c = hitSomeMore(h2a, 2)
     c2u = toneCurve(8, 10, 1)
     c2d = toneCurve(8, 10, -1)
 
@@ -281,26 +298,31 @@ def testMultiPartMelody():
     P(mus, k1b, h1a, c1d, b1b)
     P(mus, k1b, h1a, c1u, b1b)
     P(mus, k1b, h1b, c1d, b1b)
-
     S(mus, 8, b1b)
-    P(mus, k1c, h2a, c2u, b1b)
-    P(mus, k1c, h2a, c2d, b1b)
-    P(mus, k1c, h2a, c2u, b1b)
-    P(mus, k1c, h2b, c2d, b1b)
 
-    S(mus, 8, b1b)
-    P(mus, k1b, h1a, c1u, b1b)
-    P(mus, k1b, h1a, c1d, b1b)
-    P(mus, k1b, h1a, c1u, b1b)
-    P(mus, k1b, h1b, c1d, b1b)
+    S(mus, 8, b1c)
+    for _ in range(2):
+        S(mus, 8, b1c)
+        P(mus, k1c, h2a, c2u, b1c)
+        P(mus, k1c, h2a, c2d, b1c)
+        P(mus, k1c, h2a, c2u, b1c)
+        P(mus, k1c, h2b, c2d, b1c)
+
+    S(mus, 8, b1c)
+    P(mus, k1b, h1a, c1u, b1c)
+    P(mus, k1b, h1a, c1d, b1c)
+    P(mus, k1b, h1a, c1u, b1c)
+    P(mus, k1b, h1b, c1d, b1c)
+    S(mus, 16, b1c)
 
     music  = pat2wav(mus, 8000) * 0.5
     wavfile.write('melody.wav', FS, music)
 
 
 def main():
+    generatePlots()
     #testSingleMelody()
-    testMultiPartMelody()
+    #testMultiPartMelody()
 
 
 if __name__ == '__main__':
