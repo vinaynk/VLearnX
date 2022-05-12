@@ -15,7 +15,7 @@ import os
 import subprocess
 import shlex
 
-VEL = 6
+VEL = 7
 SRC = 'ogg'
 DST = 'piano'
 
@@ -60,6 +60,7 @@ def writeMappedTone(base, mapped, shift=0):
 
 def processAllKeys(resmap):
     for key, val in resmap.items():
+        print('--' * 40)
         writeMappedTone(key, key)
         for shift, mapped in val:
             if mapped is None:

@@ -42,7 +42,7 @@ def hitSomeMore(hits, nhit=1):
     return hits
 
 
-def hitFamilyProg(patlen=16, start=6, step=1, count=6):
+def hitFamilyProg(patlen=16, start=7, step=1, count=6):
     'create a family for progressively increasing number of hits'
     ret  = []
     hits = pickHitPoints(patlen, start)
@@ -91,7 +91,7 @@ def combineToneCurves(curv1, curv2, beta=0.3):
     return ret
 
 
-def curveFamilyProg(patlen=16, wlen=20, incli=1, beta=0.1, count=6):
+def curveFamilyProg(patlen=16, wlen=10, incli=0, beta=0.2, count=6):
     'produces a family of curves'
     ret  = []
     curve1 = toneCurve(patlen, wlen, incli)
@@ -186,7 +186,7 @@ def repeatPatten(pat, count):
     return ret
 
 
-def addBackground(pattern, keys, dur=1, vol=-4):
+def addBackground(pattern, keys, dur=4, vol=-2):
     keys = keys.split()
     for idx, frame in enumerate(pattern):
         key = keys[idx%len(keys)]
@@ -204,95 +204,98 @@ def testSingleMelody():
     curve  = toneCurve(16, 4, 1)
     melody = assembleMelody(keys, hits, curve)
     melody = expandKeypat(melody)
-    melody = repeatPatten(melody, 4)
+    melody = repeatPatten(melody)
     melody = attachSilence(melody)
     music  = addBackground(melody, '7c - 2c - - 2c - -', 4)
     music  = pat2wav(melody, 12000)
     wavfile.write('melody.wav', FS, music)
 
 
+def extMelodyPart(li, k, h, c, b):
+    k   = k.split()
+    mel = assembleMelody(k, h, c)
+    mel = expandKeypat(mel)
+    mel = addBackground(mel, b)
+    li.extend(mel)
 
-class MultiPartMelodyMusic:
 
-    def __init__(self):
-        self.patlen = 16
-        self.count  = 10
-        self.initKeyset()
-        self.initHitSet()
-        self.initToneCurves()
-        self.initBackground()
-
-    def initKeyset(self):
-        keyset = [ '4c 4e 4d 4f 4g', '4c 4f 4g 4a' ]
-        self.keyset = [ it.split() for it in keyset ]
-
-    def initHitSet(self):
-        self.hitset = []
-        for ii in range(self.count):
-            hitfam = hitFamilyProg(self.patlen, count=self.count)
-            self.hitset.append(hitfam)
-
-    def initToneCurves(self):
-        self.curveset = []
-        for ii in range(self.count):
-            incli = (1 - (ii % 2) * 2) * np.random.rand()
-            curvefam = curveFamilyProg(self.patlen, incli=incli, count=self.count)
-            self.curveset.append(curvefam)
-
-    def initBackground(self):
-        self.backgrounds = [
-          '7c - -  - 2c - -  -',
-          '6c - 3c - 2e - 2g -',
-          '6c - 3c - 3d - 2c 2d',
-        ]
-
-    def makePattern(self, li, k, hf, hi, cf, ci, bi, padl=0, padr=0, rpt=1):
-        keys = self.keyset[k]
-        hits = self.hitset[hf][hi]
-        curv = self.curveset[cf][ci]
-        bg   = self.backgrounds[bi]
-
-        melody = assembleMelody(keys, hits, curv)
-        melody = expandKeypat(melody)
-        if rpt > 1:
-            melody = repeatPatten(melody, rpt)
-        melody = attachSilence(melody, padl, padr)
-        addBackground(melody, bg)
-
-        li.extend(melody)
-
-    def save(self, fname, tstep=8000, extradur=1):
-        seed = np.random.seed
-        P    = self.makePattern
-
-        li = []
-
-        #     k  hf hi cf ci bi
-        P(li, 0, 0, 0, 0, 0, 0, 8)
-        P(li, 0, 0, 0, 0, 0, 0)
-        P(li, 0, 0, 1, 0, 1, 0)
-        P(li, 0, 0, 1, 1, 0, 1)
-        P(li, 0, 0, 2, 1, 1, 1)
-
-        P(li, 0, 2, 1, 2, 0, 1)
-        P(li, 0, 2, 2, 2, 1, 1)
-        P(li, 1, 2, 2, 3, 1, 1)
-        P(li, 1, 2, 3, 3, 1, 1)
-
-        P(li, 0, 3, 0, 2, 0, 2, 8)
-        P(li, 1, 3, 1, 2, 0, 2)
-        P(li, 1, 3, 1, 2, 5, 2)
-        P(li, 0, 2, 2, 3, 1, 2)
-        P(li, 1, 2, 3, 3, 1, 2, 0, 8)
-
-        music  = pat2wav(li, tstep, extradur)
-        wavfile.write(fname, FS, music)
+def onlyBackground(li, nf, b):
+    mel = [ [] for f in range(nf) ]
+    mel = addBackground(mel, b)
+    li.extend(mel)
 
 
 def testMultiPartMelody():
-    np.random.seed(16)
-    mm = MultiPartMelodyMusic()
-    mm.save('melody.wav')
+    np.random.seed(11)
+    P = extMelodyPart
+    S = onlyBackground
+
+    k1a = '5c 5d 5f 5e'
+    k1b = '4c 4d 4f 4e'
+    k1c = '5c 5f 5d 5e'
+
+    h1a = pickHitPoints(8, 4)
+    h1b = hitSomeMore(h1a, 1)
+    h1c = hitSomeMore(h1a, 2)
+    c1u = toneCurve(8, 10, 0.5)
+    c1d = toneCurve(8, 10, -0.5)
+
+    b1a = '7c - - - 2c - - -'
+    b1b = '7c - 3c - - - 2c -'
+    b1b = '7c - 3c - 6c - 2c -'
+
+    mus = []
+
+    S(mus, 8, b1a)
+    P(mus, k1a, h1a, c1u, b1a)
+    P(mus, k1a, h1a, c1d, b1a)
+    P(mus, k1a, h1a, c1u, b1a)
+    P(mus, k1a, h1b, c1d, b1a)
+
+    S(mus, 16, b1b)
+    P(mus, k1a, h1a, c1u, b1b)
+    P(mus, k1a, h1a, c1d, b1b)
+    P(mus, k1a, h1a, c1u, b1b)
+    P(mus, k1a, h1b, c1d, b1b)
+
+    h2a = pickHitPoints(8, 4)
+    h2b = hitSomeMore(h1a, 1)
+    h2c = hitSomeMore(h1a, 2)
+    c2u = toneCurve(8, 10, 1)
+    c2d = toneCurve(8, 10, -1)
+
+    S(mus, 8, b1a)
+    P(mus, k1b, h2a, c2u, b1a)
+    P(mus, k1b, h2a, c2d, b1a)
+    P(mus, k1b, h2a, c2u, b1a)
+    P(mus, k1b, h2b, c2d, b1a)
+
+    S(mus, 8, b1b)
+    P(mus, k1b, h2a, c2u, b1b)
+    P(mus, k1b, h2a, c2d, b1b)
+    P(mus, k1b, h2a, c2u, b1b)
+    P(mus, k1b, h2b, c2d, b1b)
+
+    S(mus, 8, b1b)
+    P(mus, k1b, h1a, c1u, b1b)
+    P(mus, k1b, h1a, c1d, b1b)
+    P(mus, k1b, h1a, c1u, b1b)
+    P(mus, k1b, h1b, c1d, b1b)
+
+    S(mus, 8, b1b)
+    P(mus, k1c, h2a, c2u, b1b)
+    P(mus, k1c, h2a, c2d, b1b)
+    P(mus, k1c, h2a, c2u, b1b)
+    P(mus, k1c, h2b, c2d, b1b)
+
+    S(mus, 8, b1b)
+    P(mus, k1b, h1a, c1u, b1b)
+    P(mus, k1b, h1a, c1d, b1b)
+    P(mus, k1b, h1a, c1u, b1b)
+    P(mus, k1b, h1b, c1d, b1b)
+
+    music  = pat2wav(mus, 8000) * 0.5
+    wavfile.write('melody.wav', FS, music)
 
 
 def main():
