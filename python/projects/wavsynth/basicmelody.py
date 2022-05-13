@@ -1,5 +1,16 @@
 #!/usr/bin/env python
 
+# --
+# NOTE: Output melody license follows CC BY 3.0
+# (attribution to Vinay (and others) at VLearnX)
+# https://creativecommons.org/licenses/by/3.0/
+# --
+# NOTE: Attribution is also required for samples
+# for each melody generated.
+# Check the folders under samples dir for more info
+# on attribution for respective instrument samples
+# --
+
 import numpy as np
 from scipy.io import wavfile
 
@@ -7,6 +18,8 @@ import basicsynth as bsynth
 from basicsynth import iround, FS, F32
 import basicsequencer as bseq
 from copy import deepcopy as dcopy
+
+from matplotlib import pyplot as plt
 
 import plotutils
 
@@ -55,9 +68,22 @@ def hitFamilyProg(patlen=16, start=7, step=1, count=6):
 
 def printHits(hits):
     'print hit pattern'
-    char = '.x'
+    char = '.↓'
     pstr = ' '.join((char[i] for i in hits))
-    print(pstr)
+    print(pstr, '\n')
+
+
+def testHitPatterns():
+    # np.random.seed(3)
+    print('4 out of 8')
+    p1 = pickHitPoints(8, 4)
+    printHits(p1)
+    print('6 out of 16')
+    p2 = pickHitPoints(16, 6)
+    printHits(p2)
+    print('Variation of the above')
+    p3 = hitSomeMore(p2, 2)
+    printHits(p3)
 
 
 #== tone curve
@@ -75,11 +101,11 @@ def toneCurve(patlen=16, wlen=8, incli=0):
     if wlen > 1:
         nsize += 2 * wlen
     noise  = np.random.rand(nsize)
+    if incli != 0:
+        noise += np.linspace(0, incli, len(noise))
     if wlen > 1:
         win    = np.hamming(wlen)
         noise = np.convolve(noise, win, 'same')[wlen:-wlen]
-    if incli != 0:
-        noise += np.linspace(0, incli, len(noise))
     noise = norm01(noise)
     return noise
 
@@ -91,7 +117,8 @@ def combineToneCurves(curv1, curv2, beta=0.3):
     return ret
 
 
-def curveFamilyProg(patlen=16, wlen=10, incli=0, beta=0.2, count=6):
+def curveFamilyProg(patlen=16, wlen=10, incli=0,
+                    beta=0.2, count=6):
     'produces a family of curves'
     ret  = []
     curve1 = toneCurve(patlen, wlen, incli)
@@ -101,6 +128,25 @@ def curveFamilyProg(patlen=16, wlen=10, incli=0, beta=0.2, count=6):
         mixed = combineToneCurves(curve1, curve2, beta*ii)
         ret.append(mixed)
     return ret
+
+
+def testToneCurves():
+    np.random.seed(1)
+    curve1 = toneCurve(16, 0, 0)        # direct
+    curve2 = toneCurve(16, 10, 0)       # smoothing
+    plt.plot(curve1)
+    plt.plot(curve2)
+    plt.legend(['raw', 'smoothed' ], fontsize=15)
+    plt.title('Raw vs Smooth', fontsize=15)
+    plt.show()
+    curve3 = toneCurve(16, 20, 1)       # inclination up
+    curve4 = toneCurve(16, 20, -1)      # inclination down
+    plt.plot(curve3)
+    plt.plot(curve4)
+    plt.legend(['inclination up', 'inclination down'],
+               fontsize=15)
+    plt.show()
+
 
 
 #== keys
@@ -154,16 +200,21 @@ def expandKeypat(keypat, dur=1, vol=0):
 
 
 def pat2wav(pat, tstep=12000, extradur=0.25):
-    'convert pattern to wav. patten should be list of list of 4-length tone-info'
+    '''
+    convert pattern to wav.
+    patten should be list of list of 4-length tone-info
+    '''
     dur = tstep / FS
     music = []
     for idx, frame in enumerate(pat):
         vecs = []
         for val in frame:
-            vec = bsynth.sampleSynth(val[0], val[1], dur*val[2] + extradur, val[3])
+            vec = bsynth.sampleSynth(
+                    val[0], val[1], dur*val[2] + extradur,
+                    val[3])
             vecs.append(vec)
         music.append(vecs)
-    music = bseq.sequenceDirect(music, tstep)
+    music = bseq.sequenceDirect(music, tstep) * 0.5
     return music
 
 
@@ -198,19 +249,20 @@ def addBackground(pattern, keys, dur=4, vol=-3):
 
 
 def testSingleMelody():
-    np.random.seed(12)
+    np.random.seed(11)
+    #np.random.seed(9)
     keys   = '5c 5d 5e 5f'.split()
-    for step in range(7):
-        hits   = pickHitPoints(16, 7)
-        curve  = toneCurve(16, 0, 0)
-        plotutils.plotMelodyGen(step, keys, hits, curve)
-    return
+    hits   = pickHitPoints(16, 7)
+    curve  = toneCurve(16, 10, -1)
+    #plt.plot(curve); plt.show()
     melody = assembleMelody(keys, hits, curve)
+    #print('\nassembleMelody output:\n', melody, sep='')
     melody = expandKeypat(melody)
-    melody = repeatPatten(melody)
-    melody = attachSilence(melody)
-    music  = addBackground(melody, '7c - 2c - - 2c - -', 4)
-    music  = pat2wav(melody, 12000)
+    #print('\nexpandKeypat output:\n', melody, sep='')
+    #print('\n4-list: [octave, key, dur, vol(db)]')
+    melody = attachSilence(melody, 8, 8)
+    music  = addBackground(melody, '7c - 2c - 6c 2c - 6d', 4)
+    music  = pat2wav(melody, 8000)
     wavfile.write('melody.wav', FS, music)
 
 
@@ -315,14 +367,17 @@ def testMultiPartMelody():
     P(mus, k1b, h1b, c1d, b1c)
     S(mus, 16, b1c)
 
-    music  = pat2wav(mus, 8000) * 0.5
+    music  = pat2wav(mus, 8000)
     wavfile.write('melody.wav', FS, music)
 
 
+
 def main():
-    generatePlots()
+    #testToneCurves()
+    #testHitPatterns()
+    #generatePlots()
     #testSingleMelody()
-    #testMultiPartMelody()
+    testMultiPartMelody()
 
 
 if __name__ == '__main__':
