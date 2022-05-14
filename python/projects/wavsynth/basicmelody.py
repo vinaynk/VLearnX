@@ -2,7 +2,7 @@
 
 # --
 # NOTE: Output melody license follows CC BY 3.0
-# (attribution to Vinay (and others) at VLearnX)
+# (attribution to Vinay, Moritz and others at VLearnX)
 # https://creativecommons.org/licenses/by/3.0/
 # --
 # NOTE: Attribution is also required for samples
