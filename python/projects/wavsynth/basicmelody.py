@@ -237,14 +237,24 @@ def repeatPatten(pat, count):
     return ret
 
 
-def addBackground(pattern, keys, dur=4, vol=-3):
+def chordKeyseqExpand(keys, dur=4, vol=-3):
     keys = keys.split()
+    keys = [ k.split(',') for k in keys ]
+    def kmapExp(ok):
+        o, k = oksplt(ok)
+        return [o, k, dur, vol]
+    ret  = []
+    for ki in keys:
+        fr = [ kmapExp(k) for k in ki if k != '-' ]
+        ret.append(fr)
+    return ret
+
+
+def addBackground(pattern, keys, dur=4, vol=-3):
+    keys = chordKeyseqExpand(keys)
     for idx, frame in enumerate(pattern):
-        key = keys[idx%len(keys)]
-        if key == '-':
-            continue
-        o, k = oksplt(key)
-        frame.append([o, k, dur, vol])
+        keyseq = keys[idx%len(keys)]
+        frame.extend(dcopy(keyseq))
     return pattern
 
 
@@ -276,6 +286,14 @@ def generatePlots():
         hits   = pickHitPoints(16, 7)
         curve  = toneCurve(16, wsize, 0)
         plotutils.plotMelodyGen(step, keys, hits, curve)
+
+
+def expand(*args):
+    return args
+
+
+def merge(pat1, pat2):
+    return [ expand(*x1, *x2) for x1, x2 in zip(pat1, pat2) ]
 
 
 def extMelodyPart(li, k, h, c, b):
@@ -371,6 +389,12 @@ def testMultiPartMelody():
     wavfile.write('melody.wav', FS, music)
 
 
+def testChordKeyseqExpand():
+    keys = '7c,3c - - 7c - 3c 7a - 2c,2d'
+    exp  = chordKeyseqExpand(keys)
+    print(exp)
+
+
 
 def main():
     #testToneCurves()
@@ -378,6 +402,7 @@ def main():
     #generatePlots()
     #testSingleMelody()
     testMultiPartMelody()
+    #testChordKeyseqExpand()
 
 
 if __name__ == '__main__':
