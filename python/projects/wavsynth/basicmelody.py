@@ -250,12 +250,18 @@ def chordKeyseqExpand(keys, dur=4, vol=-3):
     return ret
 
 
-def addBackground(pattern, keys, dur=4, vol=-3):
-    keys = chordKeyseqExpand(keys)
+def addBackground(pattern, keys, dur=-1, vol=-1):
+    if dur < 0 : dur = addBackground.bgdur
+    if vol < 0 : vol = addBackground.bgvol
+    keys = chordKeyseqExpand(keys, dur, vol)
     for idx, frame in enumerate(pattern):
         keyseq = keys[idx%len(keys)]
         frame.extend(dcopy(keyseq))
     return pattern
+
+
+addBackground.bgdur = 4
+addBackground.bgvol = -3
 
 
 def testSingleMelody():
@@ -271,7 +277,7 @@ def testSingleMelody():
     #print('\nexpandKeypat output:\n', melody, sep='')
     #print('\n4-list: [octave, key, dur, vol(db)]')
     melody = attachSilence(melody, 8, 8)
-    music  = addBackground(melody, '7c - 2c - 6c 2c - 6d', 4)
+    music  = addBackground(melody, '7c - 2c - 6c 2c - 6d')
     music  = pat2wav(melody, 8000)
     wavfile.write('melody.wav', FS, music)
 
