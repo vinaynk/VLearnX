@@ -182,6 +182,9 @@ def elongate(pat, dist=2):
 
 
 def oksplt(key):
+    #print(key)
+    if key[0] in bsynth.__dmap:
+        return 0, key
     return int(key[0]), key[1:]
 
 
@@ -256,7 +259,9 @@ def addBackground(pattern, keys, dur=-1, vol=-1):
     keys = chordKeyseqExpand(keys, dur, vol)
     for idx, frame in enumerate(pattern):
         keyseq = keys[idx%len(keys)]
+        frame  = list(frame)
         frame.extend(dcopy(keyseq))
+        pattern[idx] = frame
     return pattern
 
 
@@ -302,12 +307,23 @@ def merge(pat1, pat2):
     return [ expand(*x1, *x2) for x1, x2 in zip(pat1, pat2) ]
 
 
-def extMelodyPart(li, k, h, c, b):
+def extMelodyPart(li, k, h, c, b=None):
     k   = k.split()
     mel = assembleMelody(k, h, c)
     mel = expandKeypat(mel)
-    mel = addBackground(mel, b)
+    if b is not None:
+        mel = addBackground(mel, b)
     li.extend(mel)
+
+
+def extMelodySeqPart(mel3seq):
+    parts = []
+    for k, h, c in mel3seq:
+        k   = k.split()
+        mel = assembleMelody(k, h, c)
+        parts.extend(mel)
+    parts = expandKeypat(parts)
+    return parts
 
 
 def onlyBackground(li, nf, b):
@@ -400,6 +416,9 @@ def testChordKeyseqExpand():
     exp  = chordKeyseqExpand(keys)
     print(exp)
 
+
+def choice(seq):
+    return seq[np.random.randint(0, len(seq))]
 
 
 def main():
