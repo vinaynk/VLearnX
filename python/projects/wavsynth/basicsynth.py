@@ -17,6 +17,7 @@ def iround(x):
     return int(round(x))
 
 
+@lru_cache(maxsize=None)
 def getSinWav(freq, nsamp, amp=0.2):
     tx    = np.arange(nsamp)
     wav   = np.sin(2 * np.pi * freq / FS * tx) * amp
@@ -246,16 +247,18 @@ def pianoSample(octave, key, dur, vol):
     return audio
 
 
-__dmap = { 'H' : 'samples/home/' }
+__dmap = { 'H' : 'samples/home/',
+           'K' : 'samples/drumkit/' }
 
-def loadByWavlist(key):
+def loadByWavlist(key, dur, vol):
     srcdir = __dmap[key[0]]
     idx = int(key[1:]) # this is the line number
     with open(f'{srcdir}/wavlist.txt') as fi:
         lines = [ line.strip() for line in fi ]
-    fname = lines[idx-0]
+    fname = lines[idx-1]
     audio, rate = sf.read(f'{srcdir}/{fname}')
     assert rate == FS
+    audio = applyEnv(audio, dur, vol)
     return F32(audio)
 
 
@@ -264,7 +267,7 @@ def sampleSynth(octave, key, dur, vol):
     if key[0] == 'P':
         ret = pianoSample(octave, key[1:], dur, vol)
     elif key[0] in __dmap:
-        ret = loadByWavlist(key)
+        ret = loadByWavlist(key, dur, vol)
     else:
         ret = pianoSample(octave, key, dur, vol)
     return ret
