@@ -222,9 +222,10 @@ def kt4fdv(kt4):
 
 
 def getSampleEnv(dur):
+    att  = int(0.002 * FS)
     dur  = int(dur * FS)
     fall = int(0.2 * FS)
-    env = np.hstack([ np.ones(dur), np.linspace(1, 0, fall) ])
+    env = np.hstack([ np.linspace(0, 1, att), np.ones(dur), np.linspace(1, 0, fall) ])
     return env
 
 
@@ -232,9 +233,14 @@ def applyEnv(audio, dur, vol):
     vol1 = 10 ** (vol / 10)
     audio = audio / abs(audio).max() * 0.5 * vol1
     env   = getSampleEnv(dur)
+    if len(audio) < len(env):
+        diff  = len(env) - len(audio)
+        audio = np.hstack((audio, np.zeros(diff, dtype=np.float32)))
     if len(audio) > len(env):
         audio = audio[:len(env)]
     audio *= env
+    audio = audio / abs(audio).max() * vol1
+    #- plt.plot(audio); plt.show()
     return F32(audio)
 
 
