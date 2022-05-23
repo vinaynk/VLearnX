@@ -256,53 +256,98 @@ def music002():
 
 def music003():
     addBackground.bgdur = 4
-    addBackground.bgvol = -2
+    addBackground.bgvol = -4
+
+    _seeds = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    def seeder(idx):
+        np.random.seed(idx * 10000 + _seeds[idx] + 10)
 
     P = extMelodyPart
     S = onlyBackground
+    Q = extMelodySeqPart
+    B = addBackground
 
-    #k0 = '4a 5c 5f '
-    k0 = [ '4c 4d 4e 4g 4a', '3c 3d 3e 3g' ]
-    k2 = '5c 5e 5f 5g'
+    ra1 = '1a,2a,K24 - 2a - 1b,K24 - K17 2a '
+    ra2 = '1a,2a,K24 - 3d - 1a,K24 - K17 3d '
+    ra  = ra1 + ra2
 
-    cyc = 8
+    rb1 = '1a,2a,K24 - K35,2a,6c - 1b,K24 - 2a,K17 - '
+    rb2 = '1a,2a,K24 - K35,2a,6d - 2d,K24 - 2a,K17 - '
+    rb  = rb1 + rb2
 
-    # np.random.seed(3)
-    mset = []
-    for tr in range(2):
-        hitset = []
-        for ii in range(2):
-            h1 = pickHitPoints(cyc, 4)
-            h2 = hitSomeMore(h1, 1)
-            hitset.append((h1, h2))
-        hits = []
-        nh   = 32
-        for ii in range(nh):
-            h1, h2 = choice(hitset)
-            hits.extend(h1)
-            hits.extend(h2)
-        curvs = []
-        for ii in range(nh*2):
-            curv = toneCurve(cyc, 4 + tr*4, 0)
-            curvs.append(curv)
-        curv = np.hstack(curvs)
-        #plt.plot(curv); plt.show()
+    rc1 = '1a,2a,K24 7c K35,2a,6f - 7c,1b,K24,3f 6f 2a,7c,K17 3f '
+    rc2 = '1a,2a,K24 7c K35,2a,6a - 7c,2d,K24,3d 6a 2a,7c,K17 3f '
+    rc  = rc1 + rc2
 
-        mus = []
-        P(mus, k0[tr], hits, curv)
-        mset.append(mus)
+    rd1 = '1a,2a,K24 6c K35,2a,6d - 6d,1b,K24,3f 7c 2a,6c,K17 3f '
+    rd2 = '1a,2a,K24 6c K35,2a,6e - 6f,2d,K24,3d 7c 2a,6c,K17 3f '
+    rd  = rd1 + rd2
 
-    for m in mset[1]:
-        if m:
-            m[0][-1] = -4
-    mus = merge(*mset)
 
-    music  = pat2wav(mus, 8000, 2)
+    k0 = '3b 4c 4e 4f# 4g '
+    k1 = '4b 5c 5e 5f# 5g '
+    k2 = '4c 3b 4c 4e 4f# 4e 4g'
+    k3 = '5c 4b 5c 5e 5f# 5e 5g'
+
+    active = lambda : int(np.random.uniform(patlen*0.6, patlen*0.9))
+
+    #seeder(0)
+
+    mus = []
+
+    def makePart(seed, patlen=16, active=0.7, up=0.9, down=-0.9, winsize=4,
+                 rpt=(1, 1), keys=(k0, k0), rx=rc):
+        np.random.seed(seed)
+        active = int(patlen * active)
+        h1a = pickHitPoints(patlen, active)
+        h1b = hitSomeMore(h1a, 2)
+        h1c = hitSomeMore(h1a, 2)
+        c1u = toneCurve(patlen, winsize, up)
+        c1d = toneCurve(patlen, winsize, down)
+        ki  = keys[0]
+        for ii in range(0, rpt[0]):
+            P(mus, ki, h1b, c1u, ra)
+        for ii in range(0, rpt[1]):
+            P(mus, ki, h1c, c1d, ra)
+        ki  = keys[1]
+        S(mus, 16, rb1+rb2)
+        for ii in range(0, rpt[0]):
+            P(mus, ki, h1b, c1u, rb)
+        for ii in range(0, rpt[1]):
+            P(mus, ki, h1c, c1d, rb)
+        S(mus, 16, rx)
+
+    S(mus, 16, ra)
+    makePart(3, 8, keys=(k1, k0))
+    makePart(9, 16, keys=(k0, k0), rpt=(1, 2), rx=rd)
+    makePart(3, 8, keys=(k1, k0))
+    makePart(9, 16, keys=(k1, k1), rpt=(1, 2), rx=rd)
+
+    makePart(42, 8, up=0.9, down=-0.9, keys=(k0, k1), rpt=(3, 1), rx=rd)
+    makePart(23, 8, up=-0.4, down=0.4, keys=(k3, k2), rpt=(2, 2), rx=rd, winsize=4)
+    makePart(15, 8, up=0.3, down=-0.3, keys=(k1, k0), rpt=(2, 1), rx=rd)
+    makePart(9, 16, keys=(k1, k1), rpt=(1, 2), rx=rd)
+    makePart(3, 8, keys=(k1, k0))
+
+    makePart(42, 8, up=0.9, down=-0.9, keys=(k3, k2), rpt=(3, 1), rx=rd)
+    makePart(23, 8, up=-0.4, down=0.4, keys=(k3, k2), rpt=(2, 2), rx=rd, winsize=4)
+    makePart(3, 8, keys=(k0, k1))
+
+    makePart(9, 16, keys=(k0, k0), rpt=(1, 2), rx=rd)
+    makePart(9, 16, keys=(k1, k1), rpt=(1, 2), rx=rd)
+
+    makePart(42, 8, up=0.9, down=-0.9, keys=(k0, k1), rpt=(3, 1), rx=rd)
+    makePart(23, 8, up=-0.4, down=0.4, keys=(k3, k2), rpt=(2, 2), rx=rd, winsize=4)
+    makePart(9, 16, keys=(k0, k0), rpt=(1, 2), rx=rd)
+    makePart(3, 8, keys=(k0, k1))
+    S(mus, 64, rd)
+
+
+    music  = pat2wav(mus, 18000, 1) * 0.5
     wavfile.write('melody.wav', FS, music)
 
-
 def main():
-    music002()
+    music003()
 
 
 if __name__ == '__main__':
