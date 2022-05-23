@@ -3,9 +3,6 @@
 import json
 
 
-_jumpNextSteps = []
-
-
 def _createJumpNextSteps():
     'all possible moves for the knight'
     li = [ (1, 2), (2, 1) ]
@@ -62,9 +59,13 @@ class SearchEnvFullBoard:
         self.marks[i * self.size + j] -= 1
         self.log()
 
-    def log(self):
-        if self.flog:
-            print(json.dumps(self.path), file=self.flog)
+    def log(self, collision=None):
+        if not self.flog:
+            return
+        path = self.path.copy()
+        if collision:
+            path.append(collision)
+        print(json.dumps(path), file=self.flog)
 
     def remaning(self):
         return self.size * self.size - len(self.path)
@@ -87,30 +88,70 @@ def testPrioritizeCloser():
     print(jumps)
 
 
+def warnsdorff(jumps, env):
+    'order jumps based on the number of second order possibilities'
+    ctposs = []
+    for jump in jumps:
+        possibile = possibleJumps(jump, env.size)
+        count = 0
+        for kumq in possibile:
+            if not env.isMarked(kumq):
+                count += 1
+        ctposs.append((count, jump))
+    ctposs.sort()
+    return [ el[1] for el in ctposs ]
+
+
 def knightWalk(vec, env):
     env.push(vec)
     if env.remaning() == 0:
         env.found = True
         return
     jumps = possibleJumps(vec, env.size)
+    jumps = warnsdorff(jumps, env)
     for jump in jumps:
         if env.found:
             break
         if env.isMarked(jump):
+            env.log(jump)
             continue
         knightWalk(jump, env)
     if not env.found:
         env.pop()
 
 
-def main():
-    env   = SearchEnvFullBoard(8)
-    start = (4, 4)
+def runFromStart(start, size, log=False):
+    flog  = None
+    if log:
+        flog  = open('knight_moves.txt', 'w')
+    env   = SearchEnvFullBoard(size, flog)
+    print('Start: ', start)
     knightWalk(start, env)
-    with open('knight_moves.txt', 'w') as flog:
-        json.dump(env.path, flog)
+    if log:
+        flog.close()
     print('Total jumps:', env.njumps)
     print('Path:', env.path)
+    print(flush=True)
+
+
+def runForAll():
+    size  = 8
+    for ii in range(size):
+        for jj in range(size):
+            runFromStart((ii, jj), size)
+
+
+def testFunctions():
+    candi = [ (0, 0), (2, 4), (5, 7), (6, 6) ]
+    for pos in candi:
+        possible = possibleJumps(pos, 8)
+        print(pos, possible)
+
+
+def main():
+    #testFunctions()
+    #runForAll()
+    runFromStart((2, 2), 8)
 
 
 if __name__ == '__main__':
