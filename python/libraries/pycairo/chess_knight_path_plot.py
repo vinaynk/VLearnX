@@ -102,12 +102,21 @@ class ChessBoardDrawer:
         ctx.restore()
 
 
+def prepCtx(ctx):
+    ctx.set_source_rgb(0.0, 0.05, 0.07)
+    ctx.rectangle(0, 0, 1920, 1080)
+    ctx.fill()
+    ctx.translate(420, 0)
+
+
 def drawPath(idx, path):
-    size = 800
+    size = 1080
     rows = 8
     #surface = cairo.SVGSurface(f'frames/knight-{idx:08d}.svg', size, size)
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+    #surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1920, size)
     ctx  = cairo.Context (surface)
+    prepCtx(ctx)
     brd  = ChessBoardDrawer(size, rows)
     brd.draw(ctx)
     brd.drawPath(ctx, path)
