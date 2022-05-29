@@ -152,16 +152,37 @@ def testToneCurves():
 #== keys
 
 
+def keydither(idx, prev, keys):
+    key = keys[idx]
+    if not keydither.enabled:
+        return key
+    if prev != key:
+        return key
+    newidx = 0
+    if idx == 0:
+        newidx = choice([0, 1]) + idx
+    elif idx == len(keys) - 1:
+        newidx = choice([-1, 0]) + idx
+    else:
+        newidx = choice([-1, 0, 1]) + idx
+    return keys[newidx]
+
+
+keydither.enabled = False
+
+
 def assembleMelody(keys, hits, curve):
     'assemble melody from keys, hits and curve'
     scale  = len(keys) - 0.01
     curve  = curve * scale
     toneidx = np.int32(curve)
     ret    = []
+    prev   = None
     for ht, idx in zip(hits, toneidx):
         key = None
         if ht == 1:
-            key = keys[idx]
+            key = keydither(idx, prev, keys)
+            prev = key
         ret.append(key)
     return ret
 
@@ -242,7 +263,7 @@ def repeatPatten(pat, count):
 
 def chordKeyseqExpand(keys, dur=4, vol=-3):
     keys = keys.split()
-    keys = [ k.split(',') for k in keys ]
+    keys = [ set(k.split(',')) for k in keys ]
     def kmapExp(ok):
         o, k = oksplt(ok)
         return [o, k, dur, vol]
@@ -313,23 +334,49 @@ def extMelodyPart(li, k, h, c, b=None):
     mel = expandKeypat(mel)
     if b is not None:
         mel = addBackground(mel, b)
-    li.extend(mel)
+    if li is not None:
+        li.extend(mel)
+    return mel
 
 
-def extMelodySeqPart(mel3seq):
+def extMelodySeqPart(li, mel3seq, b=None):
     parts = []
     for k, h, c in mel3seq:
         k   = k.split()
         mel = assembleMelody(k, h, c)
         parts.extend(mel)
-    parts = expandKeypat(parts)
-    return parts
+    mel = expandKeypat(parts)
+    if b is not None:
+        mel = addBackground(mel, b)
+    if li is not None:
+        li.extend(mel)
+    return mel
 
 
 def onlyBackground(li, nf, b):
     mel = [ [] for f in range(nf) ]
     mel = addBackground(mel, b)
     li.extend(mel)
+
+
+def randBgPatten(keysets, size, prob):
+    parts = []
+    for kidx, kset in enumerate(keysets):
+        part = []
+        kset = kset.split()
+        for ii in range(size):
+            key = '-'
+            if np.random.rand() < prob[kidx]:
+                key = choice(kset)
+            part.append(key)
+        parts.append(part)
+    sections = []
+    for ii in range(size):
+        sp = [ part[ii] for part in parts ]
+        sections.append(','.join(sp))
+    sections = ' '.join(sections) + ' '
+    return sections
+
 
 
 def testMultiPartMelody():

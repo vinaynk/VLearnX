@@ -2,6 +2,7 @@
 
 import numpy as np
 import re
+import json
 from scipy.io import wavfile
 from matplotlib import pyplot as plt
 
@@ -15,6 +16,9 @@ F32 = np.float32    # useful alias
 
 def iround(x):
     return int(round(x))
+
+def t2s(t):
+    return iround(FS * t)
 
 
 @lru_cache(maxsize=None)
@@ -155,7 +159,8 @@ def seqManyMuliHarmonicWav():
     sil   = np.zeros(FS//10, dtype=F32)
     wavs  = [ sil ]
     for wid in range(10):
-        wav = additiveSynth(freq, 2, 1)
+        #wav = additiveSynth(freq, 2, 1)
+        wav = fmSynth(freq, 2, 1)
         wavs.append(wav)
         wavs.append(sil)
         freq *= ratio
@@ -174,7 +179,7 @@ def keymapEqTemp():
     keys = 'c c# d d# e f f# g g# a a# b'.split()
     fvec = []
     keymap = {}
-    for oc in range(0, 5):
+    for oc in range(0, 8):
         for idx, key in enumerate(keys):
             # f[k] = α f[k-1] ; α = 2 ** (1/12)
             fkey = f0 * 2 ** (oc + idx/12)
@@ -222,7 +227,7 @@ def kt4fdv(kt4):
 
 
 def getSampleEnv(dur):
-    att  = int(0.002 * FS)
+    att  = int(0.0005 * FS)
     dur  = int(dur * FS)
     fall = int(0.2 * FS)
     env = np.hstack([ np.linspace(0, 1, att), np.ones(dur), np.linspace(1, 0, fall) ])
@@ -244,7 +249,48 @@ def applyEnv(audio, dur, vol):
     return F32(audio)
 
 
+with open('piano-harmonics.json') as fi:
+    __pianohar = json.load(fi)
+
+
+def pianoAdditiveSynth(octave, key, dur, vol):
+    '''
+    returns a synthesized sound by adding several partials
+    freq : frequency of fundamental (in Hz)
+    dur  : duration in seconds (only controls sustain)
+    vol  : volume (linear)
+    '''
+
+    freq, dur, vol = kt4fdv((octave, key, dur, vol))
+
+    freq = freq / 4
+
+    attack   = iround(0.001 * FS)
+    decay    = iround(0.001 * FS)
+    sustain  = iround(dur   * FS)
+    release  = iround(0.2   * FS)
+
+    combined   = 0
+    for idx, har in enumerate(__pianohar['peaks']):
+        fhar = freq * har       # frequency for the partial
+        if fhar > FS * 0.3:    # respect nyquist
+            break
+        fade = 1.0 + (freq/220) ** 0.5
+        amp  = np.exp(__pianohar['vals'][idx])
+        env  = adsrFadeEnvelope(attack, decay, sustain, release,
+                                sustainAmp=0.7, fade=fade)
+        partial = getSinWav(fhar, len(env), amp=amp) * env
+        combined = combined + partial
+    correction = (110 / freq) ** 0.2
+    ret = combined / abs(combined).max() * 0.5 * vol * correction
+    return F32(ret)
+
+
 def pianoSample(octave, key, dur, vol):
+    if pianoSample.type == 1:
+        return pianoAdditiveSynth(octave, key, dur, vol)
+    elif pianoSample.type == 2:
+        return fmSynth(octave, key, dur, vol)
     key = key.upper()
     fname = f'samples/piano/{octave}{key}.ogg'
     audio, rate = sf.read(fname)
@@ -253,8 +299,12 @@ def pianoSample(octave, key, dur, vol):
     return audio
 
 
+pianoSample.type = 0
+
+
 __dmap = { 'H' : 'samples/home/',
            'K' : 'samples/drumkit/' }
+
 
 def loadByWavlist(key, dur, vol):
     srcdir = __dmap[key[0]]
@@ -264,6 +314,7 @@ def loadByWavlist(key, dur, vol):
     fname = lines[idx-1]
     audio, rate = sf.read(f'{srcdir}/{fname}')
     assert rate == FS
+    dur   = 4
     audio = applyEnv(audio, dur, vol)
     return F32(audio)
 
@@ -279,9 +330,60 @@ def sampleSynth(octave, key, dur, vol):
     return ret
 
 
+def signAbsPow(sig, p=1):
+    sign = np.sign(sig)
+    return sign * abs(sig) ** p
+
+
+def fmodulate(fmods, amps, freq, dur):
+    attack  = t2s(0.1)
+    decay   = t2s(0.05)
+    release = t2s(0.3)
+    sustain = t2s(dur)
+    adsr2   = adsrFadeEnvelope(attack, decay, sustain, release, 0.9, 1)
+    adsr    = adsrFadeEnvelope(attack, decay, sustain, release, 0.9, 0.1)
+    ns      = len(adsr)
+    gain = 5
+    tx   = (2.0 * np.pi / FS) * np.arange(ns)
+    combined = 0
+    for idx, fm in enumerate(fmods):
+        comp = np.sin(fm * freq * tx)
+        comp = signAbsPow(comp, 0.8)
+        #comp = np.sign(comp)
+        combined += comp * amps[idx]
+    modsig  = 1 + gain * combined * adsr2
+    phase   = 2.0 * np.pi * freq * modsig / FS
+    phase   = phase.cumsum()
+    sig     = np.sin(phase)
+    sig     = signAbsPow(sig, 0.7)
+    sig     = sig * adsr
+    return np.float32(sig)
+
+
+def fmSynth(octave, key, dur, vol):
+
+    freq, dur, vol = kt4fdv((octave, key, dur, vol))
+
+    freq = freq / 8
+
+    AR    = np.array
+
+    fmods = AR([ 2, 5, 11 ])
+    amps  = AR([ 1, 1, 2 ])
+    amps  = amps / amps.sum()
+
+    ret = fmodulate(fmods, amps, freq, dur)
+
+    correction = (110 / freq) ** 0.1
+    ret = ret/ abs(ret).max() * vol * correction
+
+    return ret
+
+
 def testSampleSynth():
     #data = sampleSynth(6, 'a', 2, 0)
-    data = sampleSynth(6, 'H4', 2, 0)
+    #data = sampleSynth(6, 'H4', 2, 0)
+    data = fmSynth(220, 1, 1)
     plt.plot(data); plt.show()
     #print(rate, data.shape, data.dtype)
 
@@ -290,8 +392,8 @@ def main():
     #justSinWav()
     #seqManySinWavs()
     #seqManySinWavsWithEnv()
-    #seqManyMuliHarmonicWav()
-    testSampleSynth()
+    seqManyMuliHarmonicWav()
+    #testSampleSynth()
 
 
 if __name__ == '__main__':
